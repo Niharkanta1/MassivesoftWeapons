@@ -7,6 +7,7 @@ using MassivesoftCore;
 using System.Reflection;
 using SPTarkov.Server.Core.Utils;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using SPTarkov.Server.Core.Extensions;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Loaders;
@@ -18,7 +19,7 @@ namespace MassivesoftWeapons
         public override string Name { get; init; } = "MassivesoftWeapons";
         public override string Author { get; init; } = "Massivesoft";
         public override List<string>? Contributors { get; init; }
-        public override SemanticVersioning.Version Version { get; init; } = new("1.1.1");
+        public override SemanticVersioning.Version Version { get; init; } = new("1.1.2");
         public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
 
 
@@ -50,16 +51,33 @@ namespace MassivesoftWeapons
 
             //Load Item Jsons
             DirectoryInfo directoryInfoSubs = new DirectoryInfo(Path.Combine(pathToMod, "subs"));
+            if (!directoryInfoSubs.Exists)
+            {
+                return Task.CompletedTask;
+            }
             foreach (DirectoryInfo directoryInfoSubFolders in directoryInfoSubs.GetDirectories())
             {
+
+                _ = LoadBundlesAsync(directoryInfoSubFolders.FullName);
                 DirectoryInfo directoryInfoDB = new DirectoryInfo(Path.Combine(directoryInfoSubFolders.FullName, "db"));
+                if (!directoryInfoDB.Exists)
+                {
+                    continue;
+                }
                 foreach (FileInfo file in directoryInfoDB.GetFiles())
                 {
                     if (file.Extension == ".json")
                     {
                         string json = fileUtil.ReadFile(file.FullName);
+
                         try
                         {
+                            JsonNode? node = JsonNode.Parse(json);
+                            if (node is JsonObject rootObj)
+                            {
+                                rootObj.Remove("$schema");
+                                json = rootObj.ToJsonString();
+                            }
                             Dictionary<string, AdvancedNewItemFromCloneDetails>? details = JsonSerializer.Deserialize<Dictionary<string, AdvancedNewItemFromCloneDetails>>(json, JsonUtil.JsonSerializerOptionsNoIndent);
                             if (details == null || details.Count == 0)
                             {
@@ -77,7 +95,6 @@ namespace MassivesoftWeapons
                         }
                     }
                 }
-                LoadBundlesAsync(directoryInfoSubFolders.FullName);
             }
             return Task.CompletedTask;
         }
