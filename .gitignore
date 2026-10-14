@@ -53,3 +53,6 @@ libs/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+/dist
+/subs
